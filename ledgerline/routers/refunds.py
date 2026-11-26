@@ -3,7 +3,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, Header
 
 from ..auth import Principal, get_conn, principal
-from ..schemas import RefundIn, RefundOut
+from ..schemas import BulkRefundIn, BulkRefundOut, RefundIn, RefundOut
 from ..services import idempotency, refunds
 
 router = APIRouter(prefix="/v1/refunds", tags=["refunds"])
@@ -21,6 +21,21 @@ def create(
         return replay
     result = refunds.create(conn, who, body)
     idempotency.store(conn, who.account_id, idempotency_key, "refunds", result)
+    return result
+
+
+@router.post("/bulk", response_model=BulkRefundOut, status_code=201)
+def create_bulk(
+    body: BulkRefundIn,
+    idempotency_key: str | None = Header(default=None),
+    who: Principal = Depends(principal),
+    conn: sqlite3.Connection = Depends(get_conn),
+):
+    replay = idempotency.lookup(conn, who.account_id, idempotency_key, "refunds.bulk")
+    if replay is not None:
+        return replay
+    result = refunds.create_bulk(conn, who, body)
+    idempotency.store(conn, who.account_id, idempotency_key, "refunds.bulk", result)
     return result
 
 
