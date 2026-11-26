@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.15.0
+- `POST /v1/refunds/bulk`: refund up to 500 payments in one request.
+- Refunds carry `batch_id`.
+
 ## 3.14.2
 - Fix cursor pagination returning a duplicate row when invoices share a timestamp.
 

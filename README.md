@@ -24,6 +24,7 @@ Interactive docs at `/docs`.
 | POST | /v1/payments | capture against an open invoice |
 | GET | /v1/payments/{id} | |
 | POST | /v1/refunds | full or partial |
+| POST | /v1/refunds/bulk | up to 500 payments per batch |
 | GET | /v1/refunds/{id} | |
 | GET | /v1/payments/{id}/refunds | |
 | GET | /v1/audit | account audit trail |
