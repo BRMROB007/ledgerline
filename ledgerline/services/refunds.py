@@ -36,26 +36,32 @@ def list_for_payment(conn: sqlite3.Connection, account_id: str, payment_id: str)
     return [_serialize(r) for r in rows]
 
 
-def create(conn: sqlite3.Connection, who: Principal, body: RefundIn) -> dict:
-    payment = payments.find(conn, who.account_id, body.payment_id)
+def _refund_amount(conn: sqlite3.Connection, payment: sqlite3.Row, body: RefundIn) -> Decimal:
+    remaining = money.parse(payment["amount"]) - payments.refunded(conn, payment["id"])
     if body.amount is None:
-        amount = None
+        amount = remaining
     else:
         try:
             amount = money.parse(body.amount)
         except money.MoneyError as exc:
             raise Unprocessable(str(exc)) from exc
+    if amount <= 0:
+        raise Unprocessable("nothing left to refund" if body.amount is None
+                            else "amount must be positive")
+    if amount > remaining:
+        raise Unprocessable("amount exceeds refundable balance")
+    return amount
+
+
+def create(conn: sqlite3.Connection, who: Principal, body: RefundIn) -> dict:
+    payment = payments.find(conn, who.account_id, body.payment_id)
+    # Reject invalid requests without waiting for the write lock, then re-check the
+    # balance under it so concurrent refunds cannot spend the same balance.
+    _refund_amount(conn, payment, body)
     refund_id = db.new_id("re")
     conn.execute("BEGIN IMMEDIATE")
     try:
-        remaining = money.parse(payment["amount"]) - payments.refunded(conn, payment["id"])
-        if amount is None:
-            amount = remaining
-        if amount <= 0:
-            raise Unprocessable("nothing left to refund" if body.amount is None
-                                else "amount must be positive")
-        if amount > remaining:
-            raise Unprocessable("amount exceeds refundable balance")
+        amount = _refund_amount(conn, payment, body)
         conn.execute(
             "INSERT INTO refunds (id, account_id, payment_id, amount, reason, refunded_at)"
             " VALUES (?, ?, ?, ?, ?, ?)",
