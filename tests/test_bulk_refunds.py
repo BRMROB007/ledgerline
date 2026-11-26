@@ -135,7 +135,7 @@ def test_invalid_amounts_fail_per_item(acme):
     pays = [acme.paid("10.00") for _ in range(5)]
     amounts = ["abc", "NaN", "0.004", "-1.00", None]
     items = [{"payment_id": p["id"], **({"amount": a} if a else {})}
-             for p, a in zip(pays, amounts)]
+             for p, a in zip(pays, amounts, strict=True)]
     r = acme.post("/v1/refunds/bulk", {"items": items})
     assert r.status_code == 201
     body = r.json()
