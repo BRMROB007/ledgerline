@@ -70,6 +70,31 @@ class RefundOut(BaseModel):
     amount: str
     reason: str
     refunded_at: str
+    batch_id: str | None = None
+
+
+class BulkRefundItem(BaseModel):
+    payment_id: str
+    amount: str | None = None
+
+
+class BulkRefundIn(BaseModel):
+    items: list[BulkRefundItem] = Field(min_length=1, max_length=500)
+    reason: Literal["requested_by_customer", "duplicate", "fraudulent", "other"] = (
+        "requested_by_customer"
+    )
+
+
+class BulkRefundFailure(BaseModel):
+    payment_id: str
+    message: str
+
+
+class BulkRefundOut(BaseModel):
+    batch_id: str
+    created: list[RefundOut]
+    failed: list[BulkRefundFailure]
+    total_refunded: str
 
 
 class AuditOut(BaseModel):
