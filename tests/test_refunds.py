@@ -4,7 +4,8 @@ def test_full_refund_by_default(acme):
     assert r.status_code == 201
     assert r.json()["amount"] == "80.00"
     assert r.json()["reason"] == "requested_by_customer"
-    assert r.json()["created_at"]
+    assert r.json()["refunded_at"]
+    assert "created_at" not in r.json()
     assert r.json()["batch_id"] is None
 
 

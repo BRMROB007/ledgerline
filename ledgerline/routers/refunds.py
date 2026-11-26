@@ -31,12 +31,8 @@ def create_bulk(
     who: Principal = Depends(principal),
     conn: sqlite3.Connection = Depends(get_conn),
 ):
-    replay = idempotency.lookup(conn, who.account_id, idempotency_key, "refunds.bulk")
-    if replay is not None:
-        return replay
-    result = refunds.create_bulk(conn, who, body)
-    idempotency.store(conn, who.account_id, idempotency_key, "refunds.bulk", result)
-    return result
+    # Lookup, refund writes and key storage happen in one transaction in the service.
+    return refunds.create_bulk(conn, who, body, idempotency_key)
 
 
 @router.get("/{refund_id}", response_model=RefundOut)

@@ -69,7 +69,7 @@ class RefundOut(BaseModel):
     payment_id: str
     amount: str
     reason: str
-    created_at: str
+    refunded_at: str
     batch_id: str | None = None
 
 
