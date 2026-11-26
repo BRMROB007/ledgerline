@@ -1,3 +1,4 @@
+import asyncio
 import sqlite3
 
 from fastapi import FastAPI, Request
@@ -11,6 +12,7 @@ from .routers import audit, invoices, payments, refunds
 def create_app(conn: sqlite3.Connection | None = None) -> FastAPI:
     app = FastAPI(title="ledgerline", version=__version__)
     app.state.conn = conn or db.connect()
+    app.state.conn_lock = asyncio.Lock()
     db.migrate(app.state.conn)
 
     @app.exception_handler(DomainError)

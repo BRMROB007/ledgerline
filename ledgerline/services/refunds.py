@@ -38,23 +38,24 @@ def list_for_payment(conn: sqlite3.Connection, account_id: str, payment_id: str)
 
 def create(conn: sqlite3.Connection, who: Principal, body: RefundIn) -> dict:
     payment = payments.find(conn, who.account_id, body.payment_id)
-    captured = money.parse(payment["amount"])
-    remaining = captured - payments.refunded(conn, payment["id"])
     if body.amount is None:
-        amount = remaining
+        amount = None
     else:
         try:
             amount = money.parse(body.amount)
         except money.MoneyError as exc:
             raise Unprocessable(str(exc)) from exc
-    if amount <= 0:
-        raise Unprocessable("nothing left to refund" if body.amount is None
-                            else "amount must be positive")
-    if amount > remaining:
-        raise Unprocessable("amount exceeds refundable balance")
     refund_id = db.new_id("re")
-    conn.execute("BEGIN")
+    conn.execute("BEGIN IMMEDIATE")
     try:
+        remaining = money.parse(payment["amount"]) - payments.refunded(conn, payment["id"])
+        if amount is None:
+            amount = remaining
+        if amount <= 0:
+            raise Unprocessable("nothing left to refund" if body.amount is None
+                                else "amount must be positive")
+        if amount > remaining:
+            raise Unprocessable("amount exceeds refundable balance")
         conn.execute(
             "INSERT INTO refunds (id, account_id, payment_id, amount, reason, refunded_at)"
             " VALUES (?, ?, ?, ?, ?, ?)",

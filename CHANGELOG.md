@@ -3,6 +3,8 @@
 ## 3.15.0
 - `POST /v1/refunds/bulk`: refund up to 500 payments in one request.
 - Refunds carry `batch_id`.
+- Requests are serialized on the shared database connection, so one request's rollback
+  can no longer undo another's writes.
 
 ## 3.14.2
 - Fix cursor pagination returning a duplicate row when invoices share a timestamp.

@@ -1,6 +1,7 @@
 import hashlib
 import secrets
 import sqlite3
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 from fastapi import Depends, Header, HTTPException, Request
@@ -36,8 +37,11 @@ def create_account(conn: sqlite3.Connection, name: str, currency: str = "EUR") -
     return account_id
 
 
-def get_conn(request: Request) -> sqlite3.Connection:
-    return request.app.state.conn
+async def get_conn(request: Request) -> AsyncIterator[sqlite3.Connection]:
+    # Requests share one connection and SQLite transactions belong to the connection,
+    # so requests must not interleave or one request's ROLLBACK undoes another's writes.
+    async with request.app.state.conn_lock:
+        yield request.app.state.conn
 
 
 def principal(
